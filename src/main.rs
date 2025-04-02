@@ -6,8 +6,8 @@ use midir::{Ignore, MidiInput};
 use std::process::Command;
 
 fn main() {
-    let mut cmd = Command::new("loginctl");
-    let fullcmd = cmd.arg("unlock-session");
+//    let mut cmd = Command::new("loginctl");
+//    let fullcmd = cmd.arg("unlock-session");
 //    let val = fullcmd.spawn().expect("loginctl failed to start");
     match run() {
          Ok(_) => (),
@@ -17,6 +17,7 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
+
 	let mut input = String::new();
 
 	let mut midi_in = MidiInput::new("midir reading input")?;
@@ -51,12 +52,44 @@ fn run() -> Result<(), Box<dyn Error>> {
 	println!("\nOpening connection");
 	let in_port_name = midi_in.port_name(in_port)?;
 
+	let chord_lock: Vec<u8> = vec![60, 64, 67];
+	let mut c: bool = false;
+	let mut e: bool = false;
+	let mut g: bool = false;
+	let mut v: Vec<u8> = Vec::new();
 	// _conn_in needs to be a named parameter because it needs to be kept alive until the end of the scope
 	let _conn_in = midi_in.connect(
 		in_port,
 		"midir-read-input",
 		move |stamp, message, _| {
+    			let mut cmd = Command::new("loginctl");
+			let fullcmd = cmd.arg("unlock-session");
+
 			println!("{}: {:?} (len = {})", stamp, message, message.len());
+			v.push(message[1]);
+			for i in &chord_lock {
+				if message[1] == *i && *i == 60 {
+					c = true;
+				}
+				if message[1] == *i && *i == 64 {
+					e = true;
+				}
+				if message[1] == *i && *i == 67 {
+					g = true;
+				}
+			}
+			if v.len() >= 3 {
+				//println!("Third note pressed!");
+				let mut v: Vec<u8> = Vec::new();
+			}
+			if c == true && e == true && g == true {
+				println!("Chord lock unlocked!");
+				let val = fullcmd.spawn().expect("loginctl failed to start");
+				c = false;
+				e = false;
+				g = false;
+				println!("Relocking...");
+			}
 		},
 		(),
 	)?;
