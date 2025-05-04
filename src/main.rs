@@ -57,24 +57,27 @@ fn run() -> Result<(), Box<dyn Error>> {
 	let mut e: bool = false;
 	let mut g: bool = false;
 	let mut v: Vec<u8> = Vec::new();
+        let mut num: i8 = 0;
 	// _conn_in needs to be a named parameter because it needs to be kept alive until the end of the scope
 	let _conn_in = midi_in.connect(
 		in_port,
 		"midir-read-input",
 		move |stamp, message, _| {
-    			let mut cmd = Command::new("loginctl");
+			num = num + 1;
+    			println!("{}", num);
+			let mut cmd = Command::new("loginctl");
 			let fullcmd = cmd.arg("unlock-session");
 
 			println!("{}: {:?} (len = {})", stamp, message, message.len());
 			v.push(message[1]);
 			for i in &chord_lock {
-				if message[1] == *i && *i == 60 {
+				if message[1] == *i && *i == 60 && num < 4{
 					c = true;
 				}
-				if message[1] == *i && *i == 64 {
+				if message[1] == *i && *i == 64 && num < 4{
 					e = true;
 				}
-				if message[1] == *i && *i == 67 {
+				if message[1] == *i && *i == 67 && num < 4{
 					g = true;
 				}
 			}
@@ -83,12 +86,19 @@ fn run() -> Result<(), Box<dyn Error>> {
 				let mut v: Vec<u8> = Vec::new();
 			}
 			if c == true && e == true && g == true {
+				println!("{}", num);
 				println!("Chord lock unlocked!");
 				let val = fullcmd.spawn().expect("loginctl failed to start");
 				c = false;
 				e = false;
 				g = false;
 				println!("Relocking...");
+			}
+			if num >= 4 {
+				c = false;
+				e = false;
+				g = false;
+				num = 0;
 			}
 		},
 		(),
